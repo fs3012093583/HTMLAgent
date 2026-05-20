@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HTML Agent Prototype</title>
+  <style>
+    :root {
+      --bg: #f7f6f2;
+      --panel: #ffffff;
+      --ink: #1f2933;
+      --muted: #687382;
+      --line: #d9ded8;
+      --blue: #2563eb;
+      --green: #188264;
+      --amber: #9a6a00;
+      --rose: #ba3a54;
+      --shadow: 0 18px 50px rgba(31, 41, 51, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(247, 246, 242, 0.96)),
+        radial-gradient(circle at 18% 12%, rgba(37, 99, 235, 0.11), transparent 27rem),
+        radial-gradient(circle at 88% 82%, rgba(24, 130, 100, 0.13), transparent 30rem),
+        var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+      gap: 18px;
+      width: min(1480px, calc(100vw - 28px));
+      height: calc(100vh - 28px);
+      margin: 14px auto;
+    }
+
+    .shell {
+      display: flex;
+      min-height: 0;
+      flex-direction: column;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 62px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .title {
+      min-width: 0;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+    }
+
+    .title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .status {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--green);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 0 5px rgba(24, 130, 100, 0.12);
+    }
+
+    .chat {
+      min-height: 0;
+      flex: 1;
+      overflow: auto;
+      padding: 16px;
+    }
+
+    .message {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.76);
+    }
+
+    .message.user {
+      border-color: rgba(37, 99, 235, 0.28);
+      background: rgba(37, 99, 235, 0.06);
+    }
+
+    .message.agent {
+      border-color: rgba(24, 130, 100, 0.25);
+    }
+
+    .message.event {
+      border-color: rgba(154, 106, 0, 0.25);
+      background: rgba(154, 106, 0, 0.07);
+    }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .body {
+      color: var(--ink);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .composer {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-top: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .prompt {
+      width: 100%;
+      min-height: 88px;
+      resize: none;
+      border: 1px solid #c7d0d8;
+      border-radius: 8px;
+      padding: 11px 12px;
+      color: var(--ink);
+      background: #fff;
+      outline: none;
+      line-height: 1.45;
+    }
+
+    .prompt:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.11);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .samples {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .chip,
+    .send {
+      border: 1px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+    }
+
+    .chip {
+      padding: 7px 10px;
+      color: #334155;
+      background: #eef2f6;
+      font-size: 13px;
+    }
+
+    .chip:hover {
+      border-color: #c7d0d8;
+      background: #e5ebf1;
+    }
+
+    .send {
+      padding: 9px 14px;
+      color: white;
+      background: var(--blue);
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .send:hover,
+    .chip:hover {
+      transform: translateY(-1px);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .tabs {
+      display: inline-flex;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f2f5f7;
+    }
+
+    .tab {
+      min-width: 88px;
+      border: 0;
+      border-radius: 0;
+      padding: 8px 12px;
+      color: var(--muted);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .tab.active {
+      color: var(--ink);
+      background: #fff;
+      box-shadow: inset 0 0 0 1px rgba(31, 41, 51, 0.04);
+    }
+
+    .artifact-meta {
+      min-width: 0;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+
+    .frame-wrap {
+      position: relative;
+      min-height: 0;
+      background:
+        linear-gradient(45deg, rgba(203, 213, 225, 0.32) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(203, 213, 225, 0.32) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(203, 213, 225, 0.32) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(203, 213, 225, 0.32) 75%);
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+      background-size: 20px 20px;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border: 0;
+      background: white;
+    }
+
+    .code {
+      display: none;
+      min-height: 0;
+      margin: 0;
+      overflow: auto;
+      padding: 18px;
+      background: #101923;
+      color: #dbeafe;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .workspace.show-code iframe {
+      display: none;
+    }
+
+    .workspace.show-code .code {
+      display: block;
+    }
+
+    .event-log {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px 12px;
+      max-height: 124px;
+      overflow: auto;
+      padding: 12px 14px;
+      border-top: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .event-log strong {
+      color: var(--ink);
+    }
+
+    @media (max-width: 920px) {
+      .app {
+        grid-template-columns: 1fr;
+        height: auto;
+        min-height: calc(100vh - 20px);
+        margin: 10px auto;
+      }
+
+      .shell,
+      .workspace {
+        min-height: 560px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="shell" aria-label="agent conversation">
+      <header class="topbar">
+        <div class="title">
+          <h1>HTML Agent</h1>
+          <p>把传统聊天回复变成可交互 HTML 中介层</p>
+        </div>
+        <div class="status"><span class="dot"></span>Sandbox on</div>
+      </header>
+
+      <div id="chat" class="chat" aria-live="polite"></div>
+
+      <form id="composer" class="composer">
+        <textarea id="prompt" class="prompt" placeholder="试试：帮我规划一次产品发布、生成一个数据看板、做一个报价确认流程"></textarea>
+        <div class="actions">
+          <div class="samples">
+            <button class="chip" type="button" data-sample="帮我规划一次产品发布">产品发布</button>
+            <button class="chip" type="button" data-sample="生成一个数据看板">数据看板</button>
+            <button class="chip" type="button" data-sample="做一个报价确认流程">报价确认</button>
+          </div>
+          <button class="send" type="submit">生成 HTML</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="workspace" class="workspace" aria-label="html artifact workspace">
+      <header class="toolbar">
+        <div class="tabs" role="tablist" aria-label="artifact views">
+          <button id="previewTab" class="tab active" type="button">预览</button>
+          <button id="sourceTab" class="tab" type="button">源码</button>
+        </div>
+        <div id="artifactMeta" class="artifact-meta">等待 agent 生成 HTML artifact</div>
+      </header>
+      <div class="frame-wrap">
+        <iframe id="artifact" title="AI generated HTML artifact" sandbox="allow-scripts"></iframe>
+        <pre id="source" class="code"></pre>
+      </div>
+      <div id="eventLog" class="event-log">
+        <strong>事件流</strong><span>iframe 内的用户操作会通过 postMessage 回到外层 agent。</span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const chat = document.querySelector("#chat");
+    const form = document.querySelector("#composer");
+    const promptInput = document.querySelector("#prompt");
+    const iframe = document.querySelector("#artifact");
+    const source = document.querySelector("#source");
+    const workspace = document.querySelector("#workspace");
+    const previewTab = document.querySelector("#previewTab");
+    const sourceTab = document.querySelector("#sourceTab");
+    const artifactMeta = document.querySelector("#artifactMeta");
+    const eventLog = document.querySelector("#eventLog");
+
+    let artifactVersion = 0;
+    let currentPrompt = "";
+
+    const now = () => new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+    function addMessage(type, label, text) {
+      const item = document.createElement("article");
+      item.className = `message ${type}`;
+      item.innerHTML = `
+        <div class="meta"><strong>${label}</strong><span>${now()}</span></div>
+        <div class="body">${escapeHtml(text)}</div>
+      `;
+      chat.appendChild(item);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function addEvent(eventName, payload) {
+      const key = document.createElement("strong");
+      const value = document.createElement("span");
+      key.textContent = eventName;
+      value.textContent = JSON.stringify(payload);
+      eventLog.append(key, value);
+      eventLog.scrollTop = eventLog.scrollHeight;
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[char]));
+    }
+
+    function setArtifact(html, description) {
+      artifactVersion += 1;
+      const wrapped = wrapArtifact(html);
+      iframe.srcdoc = wrapped;
+      source.textContent = wrapped;
+      artifactMeta.textContent = `artifact v${artifactVersion} · ${description}`;
+      addMessage("agent", "Agent", `已生成 ${description}。右侧 HTML 可以交互，事件会回传。`);
+    }
+
+    function wrapArtifact(body) {
+      return `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: #162033;
+      background: #fbfcfd;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+    button, input, select { font: inherit; }
+    .page { min-height: 100vh; padding: 28px; }
+    .hero {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #dde5ee;
+    }
+    h2 { margin: 0; font-size: 24px; line-height: 1.18; }
+    p { color: #64748b; line-height: 1.55; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+    .card { border: 1px solid #dde5ee; border-radius: 8px; background: #fff; padding: 16px; box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06); }
+    .card h3 { margin: 0 0 8px; font-size: 15px; }
+    .metric { font-size: 30px; font-weight: 760; color: #1d4ed8; }
+    .muted { color: #64748b; font-size: 13px; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid #eef2f7; }
+    .row:last-child { border-bottom: 0; }
+    .pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 9px; background: #e8f7f1; color: #157155; font-size: 12px; }
+    .btn {
+      min-height: 38px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: white;
+      background: #2563eb;
+      cursor: pointer;
+      font-weight: 680;
+    }
+    .btn.secondary { color: #1f2937; background: #eef2f7; border-color: #dde5ee; }
+    .btn.warning { background: #b45309; }
+    .stack { display: grid; gap: 12px; margin-top: 18px; }
+    .control { display: grid; gap: 7px; }
+    label { color: #475569; font-size: 13px; font-weight: 650; }
+    input, select {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #fff;
+      color: #162033;
+    }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    @media (max-width: 760px) {
+      .page { padding: 18px; }
+      .hero { display: grid; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  ${body}
+  <script>
+    function sendAgentEvent(type, payload) {
+      parent.postMessage({ source: "html-agent-artifact", type, payload }, "*");
+    }
+    document.addEventListener("click", (event) => {
+      const target = event.target.closest("[data-agent-action]");
+      if (!target) return;
+      sendAgentEvent(target.dataset.agentAction, {
+        label: target.textContent.trim(),
+        value: target.dataset.value || null
+      });
+    });
+  <\/script>
+</body>
+</html>`;
+    }
+
+    function createArtifact(prompt) {
+      const normalized = prompt.toLowerCase();
+      if (prompt.includes("数据") || normalized.includes("dashboard")) {
+        return {
+          description: "数据看板",
+          html: dashboardArtifact()
+        };
+      }
+      if (prompt.includes("报价") || prompt.includes("确认") || normalized.includes("quote")) {
+        return {
+          description: "报价确认流程",
+          html: quoteArtifact()
+        };
+      }
+      return {
+        description: "产品发布工作台",
+        html: launchArtifact(prompt)
+      };
+    }
+
+    function launchArtifact(prompt) {
+      return `
+        <main class="page">
+          <section class="hero">
+            <div>
+              <h2>产品发布工作台</h2>
+              <p>Agent 把「${escapeHtml(prompt || "产品发布")}」转换成一个可操作界面，而不是只返回一段文字清单。</p>
+            </div>
+            <button class="btn" data-agent-action="request_next_plan" data-value="launch">生成下一版计划</button>
+          </section>
+          <section class="grid">
+            <article class="card"><h3>发布窗口</h3><div class="metric">6 天</div><p class="muted">建议先完成定价页、邮件、灰度开关。</p></article>
+            <article class="card"><h3>风险项</h3><div class="metric" style="color:#b45309">3</div><p class="muted">支付链路、容量预估、客服话术待确认。</p></article>
+            <article class="card"><h3>负责人</h3><div class="metric" style="color:#188264">4</div><p class="muted">产品、工程、增长、客服各有明确动作。</p></article>
+          </section>
+          <section class="stack">
+            <article class="card row"><span>定价页文案审阅</span><span class="pill">今天</span></article>
+            <article class="card row"><span>灰度发布规则</span><button class="btn secondary" data-agent-action="open_task" data-value="rollout">展开</button></article>
+            <article class="card row"><span>客服 FAQ</span><button class="btn secondary" data-agent-action="open_task" data-value="faq">生成</button></article>
+          </section>
+        </main>`;
+    }
+
+    function dashboardArtifact() {
+      return `
+        <main class="page">
+          <section class="hero">
+            <div>
+              <h2>运营数据看板</h2>
+              <p>这里模拟 agent 根据你的请求直接返回一个可读、可点、可继续追问的数据界面。</p>
+            </div>
+            <select onchange="sendAgentEvent('change_range', { range: this.value })">
+              <option>最近 7 天</option>
+              <option>最近 30 天</option>
+              <option>本季度</option>
+            </select>
+          </section>
+          <section class="grid">
+            <article class="card"><h3>新增用户</h3><div class="metric">12,840</div><p class="muted">较上期 +18.6%</p></article>
+            <article class="card"><h3>激活率</h3><div class="metric" style="color:#188264">42%</div><p class="muted">主要来自 onboarding 优化。</p></article>
+            <article class="card"><h3>流失预警</h3><div class="metric" style="color:#ba3a54">186</div><p class="muted">建议优先触达高价值账户。</p></article>
+          </section>
+          <section class="stack">
+            <article class="card row"><span>渠道 A 转化下降</span><button class="btn secondary" data-agent-action="explain_metric" data-value="channel_a">解释</button></article>
+            <article class="card row"><span>企业版试用提升</span><button class="btn secondary" data-agent-action="drill_down" data-value="enterprise_trial">下钻</button></article>
+            <article class="card row"><span>导出本周摘要</span><button class="btn" data-agent-action="export_summary" data-value="weekly">导出</button></article>
+          </section>
+        </main>`;
+    }
+
+    function quoteArtifact() {
+      return `
+        <main class="page">
+          <section class="hero">
+            <div>
+              <h2>报价确认</h2>
+              <p>HTML 不只是展示结果，也能收集结构化输入，再交还给 agent 继续处理。</p>
+            </div>
+            <button class="btn warning" data-agent-action="flag_review" data-value="quote">标记人工复核</button>
+          </section>
+          <section class="grid">
+            <article class="card"><h3>基础费用</h3><div class="metric">¥28,000</div><p class="muted">含 10 个席位。</p></article>
+            <article class="card"><h3>实施服务</h3><div class="metric">¥8,500</div><p class="muted">2 周交付。</p></article>
+            <article class="card"><h3>折扣</h3><div class="metric" style="color:#188264">12%</div><p class="muted">年度付款。</p></article>
+          </section>
+          <section class="card stack">
+            <div class="control"><label>付款周期</label><select id="period"><option>年度</option><option>季度</option><option>月度</option></select></div>
+            <div class="control"><label>客户备注</label><input id="note" placeholder="例如：需要补充 SLA 条款"></div>
+            <div class="actions">
+              <button class="btn" data-agent-action="approve_quote" data-value="approved">确认报价</button>
+              <button class="btn secondary" onclick="sendAgentEvent('revise_quote', { period: document.querySelector('#period').value, note: document.querySelector('#note').value })" type="button">要求修改</button>
+            </div>
+          </section>
+        </main>`;
+    }
+
+    function handlePrompt(prompt) {
+      currentPrompt = prompt;
+      addMessage("user", "User", prompt);
+      const artifact = createArtifact(prompt);
+      setArtifact(artifact.html, artifact.description);
+    }
+
+    window.addEventListener("message", (event) => {
+      if (!event.data || event.data.source !== "html-agent-artifact") return;
+      addEvent(event.data.type, event.data.payload);
+      addMessage("event", "Artifact Event", `${event.data.type}: ${JSON.stringify(event.data.payload)}`);
+
+      if (event.data.type === "request_next_plan") {
+        setArtifact(launchArtifact(`${currentPrompt}，并加入更细的执行步骤`), "产品发布工作台 · 更新版");
+      }
+    });
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const prompt = promptInput.value.trim();
+      if (!prompt) return;
+      handlePrompt(prompt);
+    });
+
+    document.querySelectorAll("[data-sample]").forEach((button) => {
+      button.addEventListener("click", () => {
+        promptInput.value = button.dataset.sample;
+        handlePrompt(button.dataset.sample);
+      });
+    });
+
+    previewTab.addEventListener("click", () => {
+      workspace.classList.remove("show-code");
+      previewTab.classList.add("active");
+      sourceTab.classList.remove("active");
+    });
+
+    sourceTab.addEventListener("click", () => {
+      workspace.classList.add("show-code");
+      sourceTab.classList.add("active");
+      previewTab.classList.remove("active");
+    });
+
+    addMessage("agent", "Agent", "这是一个本地原型。选择一个样例或输入需求，我会把回复渲染成右侧 HTML artifact。");
+    setArtifact(launchArtifact("帮我规划一次产品发布"), "产品发布工作台");
+  </script>
+</body>
+</html>
