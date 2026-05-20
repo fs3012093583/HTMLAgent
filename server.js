@@ -94,7 +94,6 @@ async function handleGenerate(request, response) {
       model,
       instructions: systemInstructions,
       input: userInput,
-      temperature: 0.4,
       max_output_tokens: 3200
     })
   });
