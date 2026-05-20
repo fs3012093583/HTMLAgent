@@ -7,8 +7,10 @@ loadEnvFile();
 
 const root = process.cwd();
 const port = Number(process.env.PORT || 4173);
-const model = process.env.OPENAI_MODEL || "gpt-5-mini";
-const openaiBaseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+const provider = process.env.LLM_PROVIDER || "openai";
+const apiType = process.env.LLM_API_TYPE || (provider === "openai" ? "responses" : "chat_completions");
+const model = process.env.LLM_MODEL || process.env.OPENAI_MODEL || defaultModelFor(provider);
+const baseUrl = trimTrailingSlash(process.env.LLM_BASE_URL || process.env.OPENAI_BASE_URL || defaultBaseUrlFor(provider));
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -64,10 +66,10 @@ server.listen(port, () => {
 });
 
 async function handleGenerate(request, response) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.LLM_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) {
     sendJson(response, 500, {
-      error: "OPENAI_API_KEY is not set. Create .env from .env.example or export the variable before starting the server."
+      error: "LLM_API_KEY is not set. Create .env from .env.example or export the variable before starting the server."
     });
     return;
   }
@@ -83,8 +85,31 @@ async function handleGenerate(request, response) {
   }
 
   const userInput = buildUserInput(prompt, event, currentHtml);
+  const artifactResult = apiType === "responses"
+    ? await generateWithResponses(apiKey, userInput)
+    : await generateWithChatCompletions(apiKey, userInput);
 
-  const upstream = await fetch(`${openaiBaseUrl}/responses`, {
+  if (artifactResult.error) {
+    sendJson(response, artifactResult.status, { error: artifactResult.error });
+    return;
+  }
+
+  if (!artifactResult.artifact.html) {
+    sendJson(response, 502, {
+      error: "The model did not return an HTML artifact.",
+      raw: artifactResult.raw
+    });
+    return;
+  }
+
+  sendJson(response, 200, {
+    description: String(artifactResult.artifact.description || "LLM HTML artifact").slice(0, 80),
+    html: sanitizeArtifactHtml(String(artifactResult.artifact.html))
+  });
+}
+
+async function generateWithResponses(apiKey, userInput) {
+  const upstream = await fetch(`${baseUrl}/responses`, {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${apiKey}`,
@@ -100,24 +125,49 @@ async function handleGenerate(request, response) {
 
   const data = await upstream.json().catch(() => ({}));
   if (!upstream.ok) {
-    sendJson(response, upstream.status, {
-      error: data.error?.message || `OpenAI API request failed with status ${upstream.status}`
-    });
-    return;
+    return {
+      error: data.error?.message || `LLM API request failed with status ${upstream.status}`,
+      status: upstream.status
+    };
   }
 
   const text = extractResponseText(data);
-  const artifact = parseArtifactJson(text);
+  return {
+    artifact: parseArtifactJson(text),
+    raw: text
+  };
+}
 
-  if (!artifact.html) {
-    sendJson(response, 502, { error: "The model did not return an HTML artifact.", raw: text });
-    return;
+async function generateWithChatCompletions(apiKey, userInput) {
+  const upstream = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: systemInstructions },
+        { role: "user", content: userInput }
+      ],
+      max_tokens: 3200
+    })
+  });
+
+  const data = await upstream.json().catch(() => ({}));
+  if (!upstream.ok) {
+    return {
+      error: data.error?.message || data.base_resp?.status_msg || `LLM API request failed with status ${upstream.status}`,
+      status: upstream.status
+    };
   }
 
-  sendJson(response, 200, {
-    description: String(artifact.description || "LLM HTML artifact").slice(0, 80),
-    html: sanitizeArtifactHtml(String(artifact.html))
-  });
+  const text = data.choices?.[0]?.message?.content || "";
+  return {
+    artifact: parseArtifactJson(text),
+    raw: text
+  };
 }
 
 function buildUserInput(prompt, event, currentHtml) {
@@ -207,6 +257,22 @@ function sendJson(response, status, payload) {
     "Cache-Control": "no-store"
   });
   response.end(JSON.stringify(payload));
+}
+
+function defaultModelFor(currentProvider) {
+  if (currentProvider === "deepseek") return "deepseek-chat";
+  if (currentProvider === "minimax") return "MiniMax-M2.7";
+  return "gpt-5-nano";
+}
+
+function defaultBaseUrlFor(currentProvider) {
+  if (currentProvider === "deepseek") return "https://api.deepseek.com/v1";
+  if (currentProvider === "minimax") return "https://api.minimax.io/v1";
+  return "https://api.openai.com/v1";
+}
+
+function trimTrailingSlash(value) {
+  return String(value).replace(/\/+$/, "");
 }
 
 async function readJsonBody(request) {
