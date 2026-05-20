@@ -222,6 +222,12 @@
       white-space: nowrap;
     }
 
+    .send:disabled {
+      cursor: wait;
+      opacity: 0.68;
+      transform: none;
+    }
+
     .send:hover,
     .chip:hover {
       transform: translateY(-1px);
@@ -359,7 +365,7 @@
           <h1>HTML Agent</h1>
           <p>把传统聊天回复变成可交互 HTML 中介层</p>
         </div>
-        <div class="status"><span class="dot"></span>Sandbox on</div>
+        <div id="statusLabel" class="status"><span class="dot"></span>API ready</div>
       </header>
 
       <div id="chat" class="chat" aria-live="polite"></div>
@@ -372,7 +378,7 @@
             <button class="chip" type="button" data-sample="生成一个数据看板">数据看板</button>
             <button class="chip" type="button" data-sample="做一个报价确认流程">报价确认</button>
           </div>
-          <button class="send" type="submit">生成 HTML</button>
+          <button id="sendButton" class="send" type="submit">生成 HTML</button>
         </div>
       </form>
     </section>
@@ -406,9 +412,12 @@
     const sourceTab = document.querySelector("#sourceTab");
     const artifactMeta = document.querySelector("#artifactMeta");
     const eventLog = document.querySelector("#eventLog");
+    const statusLabel = document.querySelector("#statusLabel");
+    const sendButton = document.querySelector("#sendButton");
 
     let artifactVersion = 0;
     let currentPrompt = "";
+    let currentArtifactHtml = "";
 
     const now = () => new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
@@ -442,8 +451,31 @@
       }[char]));
     }
 
+    function setBusy(isBusy, label = "API ready") {
+      sendButton.disabled = isBusy;
+      sendButton.textContent = isBusy ? "生成中..." : "生成 HTML";
+      statusLabel.innerHTML = `<span class="dot"></span>${escapeHtml(label)}`;
+    }
+
+    async function requestArtifact(payload) {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || `API request failed with status ${response.status}`);
+      }
+      return data;
+    }
+
     function setArtifact(html, description) {
       artifactVersion += 1;
+      currentArtifactHtml = html;
       const wrapped = wrapArtifact(html);
       iframe.srcdoc = wrapped;
       source.textContent = wrapped;
@@ -634,34 +666,57 @@
         </main>`;
     }
 
-    function handlePrompt(prompt) {
+    async function handlePrompt(prompt) {
       currentPrompt = prompt;
       addMessage("user", "User", prompt);
-      const artifact = createArtifact(prompt);
-      setArtifact(artifact.html, artifact.description);
+      setBusy(true, "Calling LLM");
+
+      try {
+        const artifact = await requestArtifact({ prompt });
+        setArtifact(artifact.html, artifact.description || "LLM HTML artifact");
+        setBusy(false, "API ready");
+      } catch (error) {
+        const artifact = createArtifact(prompt);
+        setArtifact(artifact.html, `${artifact.description} · fallback`);
+        addMessage("event", "API Error", `${error.message} 已使用本地模板兜底。`);
+        setBusy(false, "Fallback mode");
+      }
     }
 
-    window.addEventListener("message", (event) => {
+    window.addEventListener("message", async (event) => {
       if (!event.data || event.data.source !== "html-agent-artifact") return;
       addEvent(event.data.type, event.data.payload);
       addMessage("event", "Artifact Event", `${event.data.type}: ${JSON.stringify(event.data.payload)}`);
 
-      if (event.data.type === "request_next_plan") {
-        setArtifact(launchArtifact(`${currentPrompt}，并加入更细的执行步骤`), "产品发布工作台 · 更新版");
+      setBusy(true, "Updating artifact");
+      try {
+        const artifact = await requestArtifact({
+          prompt: currentPrompt,
+          event: {
+            type: event.data.type,
+            payload: event.data.payload
+          },
+          currentHtml: currentArtifactHtml
+        });
+        setArtifact(artifact.html, artifact.description || "LLM HTML artifact");
+        setBusy(false, "API ready");
+      } catch (error) {
+        addMessage("event", "API Error", `${error.message} 事件已记录，artifact 暂不更新。`);
+        setBusy(false, "Fallback mode");
       }
     });
 
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const prompt = promptInput.value.trim();
       if (!prompt) return;
-      handlePrompt(prompt);
+      await handlePrompt(prompt);
     });
 
     document.querySelectorAll("[data-sample]").forEach((button) => {
-      button.addEventListener("click", () => {
+      button.addEventListener("click", async () => {
         promptInput.value = button.dataset.sample;
-        handlePrompt(button.dataset.sample);
+        await handlePrompt(button.dataset.sample);
       });
     });
 
@@ -677,7 +732,7 @@
       previewTab.classList.remove("active");
     });
 
-    addMessage("agent", "Agent", "这是一个本地原型。选择一个样例或输入需求，我会把回复渲染成右侧 HTML artifact。");
+    addMessage("agent", "Agent", "输入需求后会调用本地 /api/generate，由服务端请求 LLM 并返回 HTML artifact。");
     setArtifact(launchArtifact("帮我规划一次产品发布"), "产品发布工作台");
   </script>
 </body>
