@@ -51,6 +51,26 @@ Rules:
 - Use Chinese UI text by default unless the user asks for another language.
 - Do not explain the code outside the JSON.`;
 
+const placementInstructions = `You route a new user question into an existing recursive knowledge tree.
+
+Return only valid JSON with this shape:
+{
+  "placement": "root" | "child",
+  "parentId": "candidate node id or null",
+  "topic": "normalized topic to generate",
+  "label": "short label for the new node",
+  "reason": "brief Chinese reason"
+}
+
+Rules:
+- Choose "root" when the new question is a separate top-level topic from existing roots.
+- Choose "child" when the new question explains, narrows, compares, or depends on an existing node.
+- Prefer the most specific matching node, not just the root.
+- If the question is ambiguous but clearly related to the active path, choose the best node in that path.
+- Do not invent parent IDs. Use only IDs from candidates.
+- Keep topic self-contained enough for page generation.
+- Do not explain outside the JSON.`;
+
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url || "/", `http://${request.headers.host}`);
@@ -62,6 +82,11 @@ const server = createServer(async (request, response) => {
 
     if (request.method === "POST" && url.pathname === "/api/expand") {
       await handleExpand(request, response);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/place") {
+      await handlePlace(request, response);
       return;
     }
 
@@ -119,6 +144,48 @@ async function handleExpand(request, response) {
   }));
 }
 
+async function handlePlace(request, response) {
+  const apiKey = process.env.LLM_API_KEY || process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    sendJson(response, 500, {
+      error: "LLM_API_KEY is not set. Create .env from .env.example or export the variable before starting the server."
+    });
+    return;
+  }
+
+  const body = await readJsonBody(request);
+  const question = String(body.question || body.topic || "").trim();
+  const activePath = Array.isArray(body.activePath) ? body.activePath.map(String) : [];
+  const candidates = Array.isArray(body.candidates) ? body.candidates.slice(0, 80) : [];
+
+  if (!question) {
+    sendJson(response, 400, { error: "Question is required." });
+    return;
+  }
+
+  if (!candidates.length) {
+    sendJson(response, 200, {
+      placement: "root",
+      parentId: null,
+      topic: question,
+      label: question.slice(0, 48),
+      reason: "当前没有可归属的节点，作为新的根主题。"
+    });
+    return;
+  }
+
+  const result = apiType === "responses"
+    ? await generateWithResponses(apiKey, buildPlacementInput(question, candidates, activePath), placementInstructions, 900)
+    : await generateWithChatCompletions(apiKey, buildPlacementInput(question, candidates, activePath), placementInstructions, 900);
+
+  if (result.error) {
+    sendJson(response, result.status, { error: result.error });
+    return;
+  }
+
+  sendJson(response, 200, normalizePlacement(result.artifact, question, candidates));
+}
+
 async function handleLegacyGenerate(request, response) {
   const body = await readJsonBody(request);
   const topic = String(body.prompt || "").trim();
@@ -141,8 +208,8 @@ async function generateAndSendPage(response, userInput) {
   }
 
   const pageResult = apiType === "responses"
-    ? await generateWithResponses(apiKey, userInput)
-    : await generateWithChatCompletions(apiKey, userInput);
+    ? await generateWithResponses(apiKey, userInput, systemInstructions, 3200)
+    : await generateWithChatCompletions(apiKey, userInput, systemInstructions, 3200);
 
   if (pageResult.error) {
     sendJson(response, pageResult.status, { error: pageResult.error });
@@ -165,7 +232,7 @@ async function generateAndSendPage(response, userInput) {
   });
 }
 
-async function generateWithResponses(apiKey, userInput) {
+async function generateWithResponses(apiKey, userInput, instructions = systemInstructions, maxOutputTokens = 3200) {
   const upstream = await fetch(`${baseUrl}/responses`, {
     method: "POST",
     headers: {
@@ -174,9 +241,9 @@ async function generateWithResponses(apiKey, userInput) {
     },
     body: JSON.stringify({
       model,
-      instructions: systemInstructions,
+      instructions,
       input: userInput,
-      max_output_tokens: 3200
+      max_output_tokens: maxOutputTokens
     })
   });
 
@@ -195,7 +262,7 @@ async function generateWithResponses(apiKey, userInput) {
   };
 }
 
-async function generateWithChatCompletions(apiKey, userInput) {
+async function generateWithChatCompletions(apiKey, userInput, instructions = systemInstructions, maxOutputTokens = 3200) {
   const upstream = await fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
@@ -205,10 +272,10 @@ async function generateWithChatCompletions(apiKey, userInput) {
     body: JSON.stringify({
       model,
       messages: [
-        { role: "system", content: systemInstructions },
+        { role: "system", content: instructions },
         { role: "user", content: userInput }
       ],
-      max_tokens: 3200
+      max_tokens: maxOutputTokens
     })
   });
 
@@ -245,6 +312,19 @@ Parent page summary: ${parentSummary}
 Context path: ${contextPath.join(" > ")}
 
 The child page should focus on the clicked concept, explain how it relates to the parent path, and provide deeper clickable concepts in the links array.`;
+}
+
+function buildPlacementInput(question, candidates, activePath) {
+  return `New user question:
+${question}
+
+Active path:
+${activePath.join(" > ") || "(none)"}
+
+Existing tree candidates:
+${JSON.stringify(candidates, null, 2)}
+
+Decide where this new question belongs in the tree.`;
 }
 
 function extractResponseText(data) {
@@ -301,6 +381,20 @@ function normalizeLinks(links) {
       description: String(link.description || "").slice(0, 180)
     }))
     .filter((link) => link.topic);
+}
+
+function normalizePlacement(placement, question, candidates) {
+  const candidateIds = new Set(candidates.map((candidate) => String(candidate.id)));
+  const requestedParentId = placement?.parentId == null ? null : String(placement.parentId);
+  const validChild = placement?.placement === "child" && requestedParentId && candidateIds.has(requestedParentId);
+
+  return {
+    placement: validChild ? "child" : "root",
+    parentId: validChild ? requestedParentId : null,
+    topic: String(placement?.topic || question).slice(0, 200),
+    label: String(placement?.label || placement?.topic || question).slice(0, 64),
+    reason: String(placement?.reason || (validChild ? "归属到最相关节点。" : "作为新的平行主题。")).slice(0, 240)
+  };
 }
 
 function slugify(value) {

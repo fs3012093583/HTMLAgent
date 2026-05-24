@@ -4,6 +4,8 @@ HTMLAgent is a local prototype for turning linear AI chat into a recursive hyper
 
 Instead of appending markdown messages, the model generates pseudo-web pages. Each page exposes clickable concepts, and clicking a concept asks the model to generate a child page under the current node. The result is a browsable knowledge tree.
 
+New user questions are also routed into the tree. For example, after "What is Transformer?", a new question like "What is CNN?" becomes a parallel root topic, while "What is self-attention?" is inserted under the Transformer node.
+
 ## Run
 
 Create a local environment file:
@@ -32,6 +34,12 @@ Create a root page:
 
 ```text
 POST /api/page
+```
+
+Route a new user question into the current tree:
+
+```text
+POST /api/place
 ```
 
 Expand a clicked concept into a child page:

@@ -441,14 +441,14 @@
       <header class="brand">
         <div>
           <h1>HTMLAgent</h1>
-          <p>递归超文本知识浏览器</p>
+          <p>递归超文本知识树</p>
         </div>
         <div id="statusLabel" class="status"><span class="dot"></span>Ready</div>
       </header>
 
       <form id="composer" class="composer">
-        <textarea id="prompt" class="prompt" placeholder="输入一个主题，例如：介绍 Transformer"></textarea>
-        <button id="sendButton" class="primary" type="submit">生成根页面</button>
+        <textarea id="prompt" class="prompt" placeholder="输入一个问题，系统会自动判断插入到树上的位置"></textarea>
+        <button id="sendButton" class="primary" type="submit">智能插入</button>
         <div class="samples">
           <button class="chip" type="button" data-sample="介绍 Transformer">Transformer</button>
           <button class="chip" type="button" data-sample="解释扩散模型">扩散模型</button>
@@ -457,7 +457,7 @@
       </form>
 
       <nav id="tree" class="tree" aria-label="page tree">
-        <div class="tree-empty">还没有知识树。输入一个主题后，AI 会生成第一个伪网页。</div>
+        <div class="tree-empty">还没有知识树。输入第一个问题后，AI 会生成根页面。</div>
       </nav>
     </aside>
 
@@ -470,8 +470,8 @@
       <div id="workspace" class="workspace">
         <div class="empty-state">
           <div>
-            <h2>从一个主题开始</h2>
-            <p>AI 会生成一个可点击的伪网页。点击页面里的概念，会递归生成子页面并挂到树上。</p>
+            <h2>从一个问题开始</h2>
+            <p>之后的每个问题都会自动归位：平行主题成为新根，相关追问成为子节点。</p>
           </div>
         </div>
       </div>
@@ -514,7 +514,7 @@
 
     function setBusy(isBusy, label = "Ready") {
       sendButton.disabled = isBusy;
-      sendButton.textContent = isBusy ? "生成中..." : "生成根页面";
+      sendButton.textContent = isBusy ? "处理中..." : "智能插入";
       statusLabel.innerHTML = `<span class="dot"></span>${escapeHtml(label)}`;
     }
 
@@ -586,6 +586,50 @@
       }
     }
 
+    async function smartInsert(question) {
+      state.error = "";
+
+      if (!state.rootIds.length) {
+        await createRoot(question);
+        return;
+      }
+
+      setBusy(true, "Placing");
+      try {
+        const placement = await postJson("/api/place", {
+          question,
+          activePath: state.activeNodeId ? getPath(state.activeNodeId).map((node) => node.title) : [],
+          candidates: buildPlacementCandidates()
+        });
+
+        if (placement.placement === "child" && placement.parentId && state.nodes[placement.parentId]) {
+          await expandNode(placement.parentId, {
+            label: placement.label || question,
+            topic: placement.topic || question,
+            description: placement.reason || "根据当前知识树自动归位"
+          });
+          return;
+        }
+
+        await createRoot(placement.topic || question);
+      } catch (error) {
+        state.error = error.message;
+        render();
+        setBusy(false, "Error");
+      }
+    }
+
+    function buildPlacementCandidates() {
+      return Object.values(state.nodes).map((node) => ({
+        id: node.id,
+        title: node.title,
+        topic: node.topic,
+        summary: node.summary,
+        path: getPath(node.id).map((item) => item.title),
+        childCount: node.children.length
+      }));
+    }
+
     async function expandNode(parentId, link) {
       const parent = state.nodes[parentId];
       if (!parent) return;
@@ -627,7 +671,7 @@
 
     function renderTree() {
       if (!state.rootIds.length) {
-        tree.innerHTML = `<div class="tree-empty">还没有知识树。输入一个主题后，AI 会生成第一个伪网页。</div>`;
+        tree.innerHTML = `<div class="tree-empty">还没有知识树。输入第一个问题后，AI 会生成根页面。</div>`;
         return;
       }
 
@@ -666,8 +710,8 @@
         workspace.innerHTML = `
           <div class="empty-state">
             <div>
-              <h2>从一个主题开始</h2>
-              <p>AI 会生成一个可点击的伪网页。点击页面里的概念，会递归生成子页面并挂到树上。</p>
+              <h2>从一个问题开始</h2>
+              <p>之后的每个问题都会自动归位：平行主题成为新根，相关追问成为子节点。</p>
             </div>
           </div>
         `;
@@ -745,13 +789,13 @@
       event.preventDefault();
       const topic = promptInput.value.trim();
       if (!topic) return;
-      await createRoot(topic);
+      await smartInsert(topic);
     });
 
     document.querySelectorAll("[data-sample]").forEach((button) => {
       button.addEventListener("click", async () => {
         promptInput.value = button.dataset.sample;
-        await createRoot(button.dataset.sample);
+        await smartInsert(button.dataset.sample);
       });
     });
 
