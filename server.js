@@ -23,21 +23,31 @@ const mimeTypes = {
   ".jpeg": "image/jpeg"
 };
 
-const systemInstructions = `You generate safe, useful HTML artifacts for a sandboxed iframe.
+const systemInstructions = `You generate recursive hypertext knowledge pages for an AI-powered pseudo-web browser.
 
 Return only valid JSON with this shape:
 {
-  "description": "short Chinese label",
-  "html": "HTML body fragment only"
+  "title": "short page title",
+  "summary": "one concise paragraph",
+  "html": "HTML body fragment for the page content",
+  "links": [
+    {
+      "label": "clickable concept label",
+      "topic": "full topic to expand next",
+      "description": "why this concept is worth opening"
+    }
+  ]
 }
 
 Rules:
-- Output an HTML body fragment, not a full document.
+- Output a knowledge page, not a chat message.
+- The page should read like a compact web article with sections, examples, and conceptual structure.
+- Output an HTML fragment, not a full document.
 - Do not include <script>, <iframe>, <object>, <embed>, <link>, <meta>, or external assets.
-- Use semantic HTML and inline CSS only when needed.
-- Keep the UI dense, practical, and directly usable.
-- Add buttons or controls with data-agent-action and optional data-value when user actions should return to the agent.
-- The iframe already provides base CSS classes: page, hero, grid, card, metric, muted, row, pill, btn, secondary, warning, stack, control, actions.
+- Do not include real <a href> links. Clickable expansion targets must be declared only in the links array.
+- Use semantic HTML: section, h2, h3, p, ul, ol, table, code, pre, blockquote.
+- Keep the page dense, navigable, and useful for recursive exploration.
+- Include 6 to 10 links for broad root pages, and 4 to 8 links for focused child pages.
 - Use Chinese UI text by default unless the user asks for another language.
 - Do not explain the code outside the JSON.`;
 
@@ -45,8 +55,18 @@ const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url || "/", `http://${request.headers.host}`);
 
+    if (request.method === "POST" && url.pathname === "/api/page") {
+      await handlePage(request, response);
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/expand") {
+      await handleExpand(request, response);
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/api/generate") {
-      await handleGenerate(request, response);
+      await handleLegacyGenerate(request, response);
       return;
     }
 
@@ -65,7 +85,53 @@ server.listen(port, () => {
   console.log(`HTMLAgent running at http://localhost:${port}`);
 });
 
-async function handleGenerate(request, response) {
+async function handlePage(request, response) {
+  const body = await readJsonBody(request);
+  const topic = String(body.topic || body.prompt || "").trim();
+
+  if (!topic) {
+    sendJson(response, 400, { error: "Topic is required." });
+    return;
+  }
+
+  await generateAndSendPage(response, buildRootPageInput(topic));
+}
+
+async function handleExpand(request, response) {
+  const body = await readJsonBody(request);
+  const topic = String(body.topic || "").trim();
+  const label = String(body.label || topic).trim();
+  const parentTitle = String(body.parentTitle || "").trim();
+  const parentSummary = String(body.parentSummary || "").trim();
+  const contextPath = Array.isArray(body.contextPath) ? body.contextPath.map(String) : [];
+
+  if (!topic) {
+    sendJson(response, 400, { error: "Topic is required." });
+    return;
+  }
+
+  await generateAndSendPage(response, buildExpandPageInput({
+    topic,
+    label,
+    parentTitle,
+    parentSummary,
+    contextPath
+  }));
+}
+
+async function handleLegacyGenerate(request, response) {
+  const body = await readJsonBody(request);
+  const topic = String(body.prompt || "").trim();
+
+  if (!topic) {
+    sendJson(response, 400, { error: "Prompt is required." });
+    return;
+  }
+
+  await generateAndSendPage(response, buildRootPageInput(topic));
+}
+
+async function generateAndSendPage(response, userInput) {
   const apiKey = process.env.LLM_API_KEY || process.env.OPENAI_API_KEY;
   if (!apiKey) {
     sendJson(response, 500, {
@@ -74,37 +140,28 @@ async function handleGenerate(request, response) {
     return;
   }
 
-  const body = await readJsonBody(request);
-  const prompt = String(body.prompt || "").trim();
-  const event = body.event || null;
-  const currentHtml = String(body.currentHtml || "").slice(0, 12000);
-
-  if (!prompt && !event) {
-    sendJson(response, 400, { error: "Prompt or event is required." });
-    return;
-  }
-
-  const userInput = buildUserInput(prompt, event, currentHtml);
-  const artifactResult = apiType === "responses"
+  const pageResult = apiType === "responses"
     ? await generateWithResponses(apiKey, userInput)
     : await generateWithChatCompletions(apiKey, userInput);
 
-  if (artifactResult.error) {
-    sendJson(response, artifactResult.status, { error: artifactResult.error });
+  if (pageResult.error) {
+    sendJson(response, pageResult.status, { error: pageResult.error });
     return;
   }
 
-  if (!artifactResult.artifact.html) {
+  if (!pageResult.artifact.html) {
     sendJson(response, 502, {
-      error: "The model did not return an HTML artifact.",
-      raw: artifactResult.raw
+      error: "The model did not return a hypertext page.",
+      raw: pageResult.raw
     });
     return;
   }
 
   sendJson(response, 200, {
-    description: String(artifactResult.artifact.description || "LLM HTML artifact").slice(0, 80),
-    html: sanitizeArtifactHtml(String(artifactResult.artifact.html))
+    title: String(pageResult.artifact.title || "Untitled").slice(0, 80),
+    summary: String(pageResult.artifact.summary || "").slice(0, 600),
+    html: sanitizeArtifactHtml(String(pageResult.artifact.html)),
+    links: normalizeLinks(pageResult.artifact.links)
   });
 }
 
@@ -170,19 +227,24 @@ async function generateWithChatCompletions(apiKey, userInput) {
   };
 }
 
-function buildUserInput(prompt, event, currentHtml) {
-  const parts = [];
-  if (prompt) {
-    parts.push(`User request:\n${prompt}`);
-  }
-  if (event) {
-    parts.push(`The user interacted with the current artifact:\n${JSON.stringify(event, null, 2)}`);
-  }
-  if (currentHtml) {
-    parts.push(`Current artifact HTML fragment for context:\n${currentHtml}`);
-  }
-  parts.push("Create the next best HTML artifact for the user.");
-  return parts.join("\n\n");
+function buildRootPageInput(topic) {
+  return `Create the root hypertext knowledge page for this topic:
+${topic}
+
+The page should introduce the topic broadly, then provide clickable expansion concepts in the links array.
+Make it suitable as the first page of a recursive knowledge tree.`;
+}
+
+function buildExpandPageInput({ topic, label, parentTitle, parentSummary, contextPath }) {
+  return `Create a child hypertext knowledge page for a concept the user clicked.
+
+Clicked label: ${label}
+Expansion topic: ${topic}
+Parent page title: ${parentTitle}
+Parent page summary: ${parentSummary}
+Context path: ${contextPath.join(" > ")}
+
+The child page should focus on the clicked concept, explain how it relates to the parent path, and provide deeper clickable concepts in the links array.`;
 }
 
 function extractResponseText(data) {
@@ -227,6 +289,26 @@ function sanitizeArtifactHtml(html) {
     .replace(/\s+on[a-z]+\s*=\s*"[^"]*"/gi, "")
     .replace(/\s+on[a-z]+\s*=\s*'[^']*'/gi, "")
     .replace(/\s+on[a-z]+\s*=\s*[^\s>]+/gi, "");
+}
+
+function normalizeLinks(links) {
+  if (!Array.isArray(links)) return [];
+  return links.slice(0, 12)
+    .map((link, index) => ({
+      id: `link_${index}_${slugify(link.label || link.topic || "topic")}`,
+      label: String(link.label || link.topic || "继续展开").slice(0, 48),
+      topic: String(link.topic || link.label || "").slice(0, 160),
+      description: String(link.description || "").slice(0, 180)
+    }))
+    .filter((link) => link.topic);
+}
+
+function slugify(value) {
+  return String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40) || "topic";
 }
 
 async function serveStatic(pathname, response, headOnly) {

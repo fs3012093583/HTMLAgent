@@ -1,6 +1,8 @@
 # HTMLAgent
 
-HTMLAgent is a local prototype for using sandboxed HTML artifacts as the interaction layer between an AI agent and a user.
+HTMLAgent is a local prototype for turning linear AI chat into a recursive hypertext knowledge browser.
+
+Instead of appending markdown messages, the model generates pseudo-web pages. Each page exposes clickable concepts, and clicking a concept asks the model to generate a child page under the current node. The result is a browsable knowledge tree.
 
 ## Run
 
@@ -22,7 +24,38 @@ Then visit:
 http://localhost:4173/index.html
 ```
 
-The browser calls the local `/api/generate` endpoint. The OpenAI API key stays on the server and is never exposed to the page.
+The browser calls local API endpoints. The provider API key stays on the server and is never exposed to the page.
+
+## Hyperpage API
+
+Create a root page:
+
+```text
+POST /api/page
+```
+
+Expand a clicked concept into a child page:
+
+```text
+POST /api/expand
+```
+
+The model returns structured JSON:
+
+```json
+{
+  "title": "Transformer",
+  "summary": "A compact page summary.",
+  "html": "<section>...</section>",
+  "links": [
+    {
+      "label": "RoPE",
+      "topic": "Rotary Position Embedding",
+      "description": "A deeper concept to open next"
+    }
+  ]
+}
+```
 
 ## Providers
 

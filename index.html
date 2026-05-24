@@ -3,19 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HTML Agent Prototype</title>
+  <title>HTMLAgent Hyperpage</title>
   <style>
     :root {
-      --bg: #f7f6f2;
+      --bg: #f6f7f4;
       --panel: #ffffff;
-      --ink: #1f2933;
-      --muted: #687382;
-      --line: #d9ded8;
+      --ink: #17202a;
+      --muted: #667284;
+      --line: #d8dfd7;
       --blue: #2563eb;
-      --green: #188264;
-      --amber: #9a6a00;
-      --rose: #ba3a54;
-      --shadow: 0 18px 50px rgba(31, 41, 51, 0.12);
+      --green: #14785f;
+      --amber: #9b6400;
+      --rose: #b42348;
+      --soft: #edf2f7;
+      --shadow: 0 18px 42px rgba(23, 32, 42, 0.11);
     }
 
     * {
@@ -27,9 +28,9 @@
       min-height: 100vh;
       color: var(--ink);
       background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(247, 246, 242, 0.96)),
-        radial-gradient(circle at 18% 12%, rgba(37, 99, 235, 0.11), transparent 27rem),
-        radial-gradient(circle at 88% 82%, rgba(24, 130, 100, 0.13), transparent 30rem),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(246, 247, 244, 0.96)),
+        radial-gradient(circle at 15% 10%, rgba(37, 99, 235, 0.1), transparent 28rem),
+        radial-gradient(circle at 88% 84%, rgba(20, 120, 95, 0.11), transparent 32rem),
         var(--bg);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       letter-spacing: 0;
@@ -41,130 +42,82 @@
       font: inherit;
     }
 
-    .app {
-      display: grid;
-      grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-      gap: 18px;
-      width: min(1480px, calc(100vw - 28px));
-      height: calc(100vh - 28px);
-      margin: 14px auto;
+    button {
+      cursor: pointer;
     }
 
-    .shell {
-      display: flex;
-      min-height: 0;
-      flex-direction: column;
+    .app {
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+      width: min(1500px, calc(100vw - 28px));
+      height: calc(100vh - 28px);
+      margin: 14px auto;
       overflow: hidden;
-      background: rgba(255, 255, 255, 0.82);
       border: 1px solid var(--line);
       border-radius: 8px;
+      background: rgba(255, 255, 255, 0.84);
       box-shadow: var(--shadow);
       backdrop-filter: blur(18px);
     }
 
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      min-height: 62px;
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.72);
-    }
-
-    .title {
+    .sidebar {
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
       min-width: 0;
+      border-right: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.76);
     }
 
-    .title h1 {
+    .brand {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand h1 {
       margin: 0;
       font-size: 18px;
       line-height: 1.2;
     }
 
-    .title p {
-      margin: 4px 0 0;
+    .brand p {
+      margin: 5px 0 0;
       color: var(--muted);
       font-size: 13px;
-      line-height: 1.35;
+      line-height: 1.4;
     }
 
     .status {
-      flex: 0 0 auto;
       display: inline-flex;
+      flex: 0 0 auto;
       align-items: center;
       gap: 8px;
       color: var(--green);
-      font-size: 13px;
+      font-size: 12px;
       white-space: nowrap;
     }
 
     .dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 999px;
-      background: var(--green);
-      box-shadow: 0 0 0 5px rgba(24, 130, 100, 0.12);
-    }
-
-    .chat {
-      min-height: 0;
-      flex: 1;
-      overflow: auto;
-      padding: 16px;
-    }
-
-    .message {
-      display: grid;
-      gap: 6px;
-      margin-bottom: 14px;
-      padding: 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.76);
-    }
-
-    .message.user {
-      border-color: rgba(37, 99, 235, 0.28);
-      background: rgba(37, 99, 235, 0.06);
-    }
-
-    .message.agent {
-      border-color: rgba(24, 130, 100, 0.25);
-    }
-
-    .message.event {
-      border-color: rgba(154, 106, 0, 0.25);
-      background: rgba(154, 106, 0, 0.07);
-    }
-
-    .meta {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .body {
-      color: var(--ink);
-      font-size: 14px;
-      line-height: 1.55;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 0 5px rgba(20, 120, 95, 0.11);
     }
 
     .composer {
       display: grid;
       gap: 10px;
-      padding: 14px;
-      border-top: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.9);
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
     }
 
     .prompt {
       width: 100%;
-      min-height: 88px;
+      min-height: 92px;
       resize: none;
       border: 1px solid #c7d0d8;
       border-radius: 8px;
@@ -172,75 +125,117 @@
       color: var(--ink);
       background: #fff;
       outline: none;
-      line-height: 1.45;
+      line-height: 1.48;
     }
 
     .prompt:focus {
       border-color: var(--blue);
-      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.11);
-    }
-
-    .actions {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      align-items: center;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
     }
 
     .samples {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      min-width: 0;
     }
 
     .chip,
-    .send {
-      border: 1px solid transparent;
+    .primary,
+    .ghost,
+    .tree-item {
       border-radius: 8px;
-      cursor: pointer;
-      transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+      transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
     }
 
     .chip {
+      border: 1px solid transparent;
       padding: 7px 10px;
       color: #334155;
-      background: #eef2f6;
+      background: #edf2f7;
       font-size: 13px;
     }
 
-    .chip:hover {
-      border-color: #c7d0d8;
-      background: #e5ebf1;
-    }
-
-    .send {
-      padding: 9px 14px;
-      color: white;
+    .primary {
+      min-height: 40px;
+      border: 0;
+      padding: 9px 12px;
+      color: #fff;
       background: var(--blue);
-      font-weight: 650;
-      white-space: nowrap;
+      font-weight: 700;
     }
 
-    .send:disabled {
+    .primary:disabled {
       cursor: wait;
-      opacity: 0.68;
-      transform: none;
+      opacity: 0.7;
     }
 
-    .send:hover,
-    .chip:hover {
+    .ghost {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      color: var(--ink);
+      background: #fff;
+    }
+
+    .chip:hover,
+    .primary:hover:not(:disabled),
+    .ghost:hover {
       transform: translateY(-1px);
     }
 
-    .workspace {
+    .tree {
+      min-height: 0;
+      overflow: auto;
+      padding: 12px;
+    }
+
+    .tree-empty {
+      padding: 16px 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .tree-children {
+      margin-left: 14px;
+      padding-left: 10px;
+      border-left: 1px solid var(--line);
+    }
+
+    .tree-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      margin: 3px 0;
+      border: 1px solid transparent;
+      padding: 7px 8px;
+      color: var(--ink);
+      background: transparent;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .tree-item.active {
+      border-color: rgba(37, 99, 235, 0.28);
+      background: rgba(37, 99, 235, 0.08);
+      color: #1746a2;
+    }
+
+    .tree-item:hover {
+      background: #eef3f7;
+    }
+
+    .tree-icon {
+      width: 18px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .main {
       display: grid;
-      grid-template-rows: auto minmax(0, 1fr) auto;
-      overflow: hidden;
-      background: rgba(255, 255, 255, 0.78);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      box-shadow: var(--shadow);
+      grid-template-rows: auto minmax(0, 1fr);
+      min-width: 0;
+      background: rgba(255, 255, 255, 0.58);
     }
 
     .toolbar {
@@ -248,98 +243,171 @@
       align-items: center;
       justify-content: space-between;
       gap: 16px;
-      padding: 12px 14px;
+      padding: 14px 18px;
       border-bottom: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.82);
+      background: rgba(255, 255, 255, 0.72);
     }
 
-    .tabs {
-      display: inline-flex;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: #f2f5f7;
-    }
-
-    .tab {
-      min-width: 88px;
-      border: 0;
-      border-radius: 0;
-      padding: 8px 12px;
-      color: var(--muted);
-      background: transparent;
-      cursor: pointer;
-    }
-
-    .tab.active {
-      color: var(--ink);
-      background: #fff;
-      box-shadow: inset 0 0 0 1px rgba(31, 41, 51, 0.04);
-    }
-
-    .artifact-meta {
+    .path {
       min-width: 0;
       color: var(--muted);
       font-size: 13px;
-      text-align: right;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    .frame-wrap {
-      position: relative;
+    .workspace {
       min-height: 0;
-      background:
-        linear-gradient(45deg, rgba(203, 213, 225, 0.32) 25%, transparent 25%),
-        linear-gradient(-45deg, rgba(203, 213, 225, 0.32) 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, rgba(203, 213, 225, 0.32) 75%),
-        linear-gradient(-45deg, transparent 75%, rgba(203, 213, 225, 0.32) 75%);
-      background-position: 0 0, 0 10px, 10px -10px, -10px 0;
-      background-size: 20px 20px;
-    }
-
-    iframe {
-      width: 100%;
-      height: 100%;
-      display: block;
-      border: 0;
-      background: white;
-    }
-
-    .code {
-      display: none;
-      min-height: 0;
-      margin: 0;
       overflow: auto;
-      padding: 18px;
+      padding: 22px;
+    }
+
+    .empty-state {
+      display: grid;
+      place-content: center;
+      min-height: 100%;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .empty-state h2 {
+      margin: 0 0 8px;
+      color: var(--ink);
+      font-size: 24px;
+    }
+
+    .node-stack {
+      display: grid;
+      gap: 18px;
+      max-width: 980px;
+      margin: 0 auto 64px;
+    }
+
+    .node {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: 0 12px 30px rgba(23, 32, 42, 0.07);
+    }
+
+    .node.child {
+      margin-left: min(44px, 6vw);
+    }
+
+    .node.child::before {
+      content: "";
+      position: absolute;
+      top: -18px;
+      left: 24px;
+      width: 1px;
+      height: 18px;
+      background: var(--line);
+    }
+
+    .node-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 18px 18px 12px;
+      border-bottom: 1px solid #eef2f3;
+    }
+
+    .node-title h2 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+
+    .node-title p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .node-actions {
+      display: flex;
+      flex: 0 0 auto;
+      gap: 8px;
+    }
+
+    .node-body {
+      padding: 16px 18px 8px;
+      line-height: 1.68;
+    }
+
+    .node-body h2,
+    .node-body h3 {
+      margin: 18px 0 8px;
+      line-height: 1.25;
+    }
+
+    .node-body p,
+    .node-body ul,
+    .node-body ol,
+    .node-body blockquote {
+      margin: 0 0 12px;
+    }
+
+    .node-body code {
+      border-radius: 6px;
+      padding: 2px 5px;
+      background: #edf2f7;
+    }
+
+    .node-body pre {
+      overflow: auto;
+      border-radius: 8px;
+      padding: 12px;
       background: #101923;
       color: #dbeafe;
-      font-size: 13px;
-      line-height: 1.5;
-      white-space: pre-wrap;
     }
 
-    .workspace.show-code iframe {
-      display: none;
+    .node-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 14px 18px 18px;
     }
 
-    .workspace.show-code .code {
-      display: block;
+    .concept {
+      display: inline-grid;
+      gap: 3px;
+      max-width: 280px;
+      border: 1px solid #cbd8e4;
+      border-radius: 8px;
+      padding: 9px 11px;
+      color: #123b74;
+      background: #f5f9ff;
+      text-align: left;
     }
 
-    .event-log {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 8px 12px;
-      max-height: 124px;
-      overflow: auto;
-      padding: 12px 14px;
-      border-top: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.92);
+    .concept strong {
+      font-size: 14px;
+    }
+
+    .concept span {
       color: var(--muted);
       font-size: 12px;
+      line-height: 1.35;
     }
 
-    .event-log strong {
-      color: var(--ink);
+    .children-note {
+      padding: 0 18px 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .error {
+      border: 1px solid rgba(180, 35, 72, 0.25);
+      border-radius: 8px;
+      margin: 0 auto 14px;
+      max-width: 980px;
+      padding: 12px 14px;
+      color: var(--rose);
+      background: rgba(180, 35, 72, 0.06);
     }
 
     @media (max-width: 920px) {
@@ -347,98 +415,105 @@
         grid-template-columns: 1fr;
         height: auto;
         min-height: calc(100vh - 20px);
-        margin: 10px auto;
       }
 
-      .shell,
-      .workspace {
-        min-height: 560px;
+      .sidebar {
+        min-height: 420px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .main {
+        min-height: 700px;
+      }
+
+      .node.child {
+        margin-left: 18px;
       }
     }
   </style>
 </head>
 <body>
   <main class="app">
-    <section class="shell" aria-label="agent conversation">
-      <header class="topbar">
-        <div class="title">
-          <h1>HTML Agent</h1>
-          <p>把传统聊天回复变成可交互 HTML 中介层</p>
+    <aside class="sidebar" aria-label="knowledge tree">
+      <header class="brand">
+        <div>
+          <h1>HTMLAgent</h1>
+          <p>递归超文本知识浏览器</p>
         </div>
-        <div id="statusLabel" class="status"><span class="dot"></span>API ready</div>
+        <div id="statusLabel" class="status"><span class="dot"></span>Ready</div>
       </header>
-
-      <div id="chat" class="chat" aria-live="polite"></div>
 
       <form id="composer" class="composer">
-        <textarea id="prompt" class="prompt" placeholder="试试：帮我规划一次产品发布、生成一个数据看板、做一个报价确认流程"></textarea>
-        <div class="actions">
-          <div class="samples">
-            <button class="chip" type="button" data-sample="帮我规划一次产品发布">产品发布</button>
-            <button class="chip" type="button" data-sample="生成一个数据看板">数据看板</button>
-            <button class="chip" type="button" data-sample="做一个报价确认流程">报价确认</button>
-          </div>
-          <button id="sendButton" class="send" type="submit">生成 HTML</button>
+        <textarea id="prompt" class="prompt" placeholder="输入一个主题，例如：介绍 Transformer"></textarea>
+        <button id="sendButton" class="primary" type="submit">生成根页面</button>
+        <div class="samples">
+          <button class="chip" type="button" data-sample="介绍 Transformer">Transformer</button>
+          <button class="chip" type="button" data-sample="解释扩散模型">扩散模型</button>
+          <button class="chip" type="button" data-sample="介绍 GraphRAG">GraphRAG</button>
         </div>
       </form>
-    </section>
 
-    <section id="workspace" class="workspace" aria-label="html artifact workspace">
+      <nav id="tree" class="tree" aria-label="page tree">
+        <div class="tree-empty">还没有知识树。输入一个主题后，AI 会生成第一个伪网页。</div>
+      </nav>
+    </aside>
+
+    <section class="main" aria-label="hyperpage workspace">
       <header class="toolbar">
-        <div class="tabs" role="tablist" aria-label="artifact views">
-          <button id="previewTab" class="tab active" type="button">预览</button>
-          <button id="sourceTab" class="tab" type="button">源码</button>
-        </div>
-        <div id="artifactMeta" class="artifact-meta">等待 agent 生成 HTML artifact</div>
+        <div id="path" class="path">等待主题</div>
+        <button id="resetButton" class="ghost" type="button">清空</button>
       </header>
-      <div class="frame-wrap">
-        <iframe id="artifact" title="AI generated HTML artifact" sandbox="allow-scripts"></iframe>
-        <pre id="source" class="code"></pre>
-      </div>
-      <div id="eventLog" class="event-log">
-        <strong>事件流</strong><span>iframe 内的用户操作会通过 postMessage 回到外层 agent。</span>
+
+      <div id="workspace" class="workspace">
+        <div class="empty-state">
+          <div>
+            <h2>从一个主题开始</h2>
+            <p>AI 会生成一个可点击的伪网页。点击页面里的概念，会递归生成子页面并挂到树上。</p>
+          </div>
+        </div>
       </div>
     </section>
   </main>
 
   <script>
-    const chat = document.querySelector("#chat");
     const form = document.querySelector("#composer");
     const promptInput = document.querySelector("#prompt");
-    const iframe = document.querySelector("#artifact");
-    const source = document.querySelector("#source");
-    const workspace = document.querySelector("#workspace");
-    const previewTab = document.querySelector("#previewTab");
-    const sourceTab = document.querySelector("#sourceTab");
-    const artifactMeta = document.querySelector("#artifactMeta");
-    const eventLog = document.querySelector("#eventLog");
-    const statusLabel = document.querySelector("#statusLabel");
     const sendButton = document.querySelector("#sendButton");
+    const resetButton = document.querySelector("#resetButton");
+    const statusLabel = document.querySelector("#statusLabel");
+    const tree = document.querySelector("#tree");
+    const workspace = document.querySelector("#workspace");
+    const pathLabel = document.querySelector("#path");
 
-    let artifactVersion = 0;
-    let currentPrompt = "";
-    let currentArtifactHtml = "";
+    const state = {
+      nodes: {},
+      rootIds: [],
+      activeNodeId: null,
+      error: ""
+    };
 
-    const now = () => new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-
-    function addMessage(type, label, text) {
-      const item = document.createElement("article");
-      item.className = `message ${type}`;
-      item.innerHTML = `
-        <div class="meta"><strong>${label}</strong><span>${now()}</span></div>
-        <div class="body">${escapeHtml(text)}</div>
-      `;
-      chat.appendChild(item);
-      chat.scrollTop = chat.scrollHeight;
+    const saved = localStorage.getItem("htmlagent.hyperpage.v1");
+    if (saved) {
+      try {
+        Object.assign(state, JSON.parse(saved));
+      } catch {
+        localStorage.removeItem("htmlagent.hyperpage.v1");
+      }
     }
 
-    function addEvent(eventName, payload) {
-      const key = document.createElement("strong");
-      const value = document.createElement("span");
-      key.textContent = eventName;
-      value.textContent = JSON.stringify(payload);
-      eventLog.append(key, value);
-      eventLog.scrollTop = eventLog.scrollHeight;
+    function saveState() {
+      localStorage.setItem("htmlagent.hyperpage.v1", JSON.stringify({
+        nodes: state.nodes,
+        rootIds: state.rootIds,
+        activeNodeId: state.activeNodeId
+      }));
+    }
+
+    function setBusy(isBusy, label = "Ready") {
+      sendButton.disabled = isBusy;
+      sendButton.textContent = isBusy ? "生成中..." : "生成根页面";
+      statusLabel.innerHTML = `<span class="dot"></span>${escapeHtml(label)}`;
     }
 
     function escapeHtml(value) {
@@ -451,21 +526,16 @@
       }[char]));
     }
 
-    function setBusy(isBusy, label = "API ready") {
-      sendButton.disabled = isBusy;
-      sendButton.textContent = isBusy ? "生成中..." : "生成 HTML";
-      statusLabel.innerHTML = `<span class="dot"></span>${escapeHtml(label)}`;
+    function makeId(prefix = "node") {
+      return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
     }
 
-    async function requestArtifact(payload) {
-      const response = await fetch("/api/generate", {
+    async function postJson(url, payload) {
+      const response = await fetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
-
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data.error || `API request failed with status ${response.status}`);
@@ -473,267 +543,226 @@
       return data;
     }
 
-    function setArtifact(html, description) {
-      artifactVersion += 1;
-      currentArtifactHtml = html;
-      const wrapped = wrapArtifact(html);
-      iframe.srcdoc = wrapped;
-      source.textContent = wrapped;
-      artifactMeta.textContent = `artifact v${artifactVersion} · ${description}`;
-      addMessage("agent", "Agent", `已生成 ${description}。右侧 HTML 可以交互，事件会回传。`);
-    }
-
-    function wrapArtifact(body) {
-      return `<!doctype html>
-<html lang="zh-CN">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      color: #162033;
-      background: #fbfcfd;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      letter-spacing: 0;
-    }
-    button, input, select { font: inherit; }
-    .page { min-height: 100vh; padding: 28px; }
-    .hero {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 24px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid #dde5ee;
-    }
-    h2 { margin: 0; font-size: 24px; line-height: 1.18; }
-    p { color: #64748b; line-height: 1.55; }
-    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
-    .card { border: 1px solid #dde5ee; border-radius: 8px; background: #fff; padding: 16px; box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06); }
-    .card h3 { margin: 0 0 8px; font-size: 15px; }
-    .metric { font-size: 30px; font-weight: 760; color: #1d4ed8; }
-    .muted { color: #64748b; font-size: 13px; }
-    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid #eef2f7; }
-    .row:last-child { border-bottom: 0; }
-    .pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 9px; background: #e8f7f1; color: #157155; font-size: 12px; }
-    .btn {
-      min-height: 38px;
-      border: 1px solid transparent;
-      border-radius: 8px;
-      padding: 8px 12px;
-      color: white;
-      background: #2563eb;
-      cursor: pointer;
-      font-weight: 680;
-    }
-    .btn.secondary { color: #1f2937; background: #eef2f7; border-color: #dde5ee; }
-    .btn.warning { background: #b45309; }
-    .stack { display: grid; gap: 12px; margin-top: 18px; }
-    .control { display: grid; gap: 7px; }
-    label { color: #475569; font-size: 13px; font-weight: 650; }
-    input, select {
-      width: 100%;
-      min-height: 38px;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      padding: 8px 10px;
-      background: #fff;
-      color: #162033;
-    }
-    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
-    @media (max-width: 760px) {
-      .page { padding: 18px; }
-      .hero { display: grid; }
-      .grid { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
-<body>
-  ${body}
-  <script>
-    function sendAgentEvent(type, payload) {
-      parent.postMessage({ source: "html-agent-artifact", type, payload }, "*");
-    }
-    document.addEventListener("click", (event) => {
-      const target = event.target.closest("[data-agent-action]");
-      if (!target) return;
-      sendAgentEvent(target.dataset.agentAction, {
-        label: target.textContent.trim(),
-        value: target.dataset.value || null
-      });
-    });
-  <\/script>
-</body>
-</html>`;
-    }
-
-    function createArtifact(prompt) {
-      const normalized = prompt.toLowerCase();
-      if (prompt.includes("数据") || normalized.includes("dashboard")) {
-        return {
-          description: "数据看板",
-          html: dashboardArtifact()
-        };
-      }
-      if (prompt.includes("报价") || prompt.includes("确认") || normalized.includes("quote")) {
-        return {
-          description: "报价确认流程",
-          html: quoteArtifact()
-        };
-      }
-      return {
-        description: "产品发布工作台",
-        html: launchArtifact(prompt)
+    function createNode(page, parentId, sourceLink = null) {
+      const id = makeId();
+      const node = {
+        id,
+        parentId,
+        title: page.title || sourceLink?.label || "Untitled",
+        topic: sourceLink?.topic || page.title || "",
+        summary: page.summary || "",
+        html: page.html || "",
+        links: Array.isArray(page.links) ? page.links : [],
+        children: [],
+        collapsed: false,
+        createdAt: new Date().toISOString()
       };
+
+      state.nodes[id] = node;
+      if (parentId) {
+        state.nodes[parentId].children.push(id);
+      } else {
+        state.rootIds.push(id);
+      }
+      state.activeNodeId = id;
+      return node;
     }
 
-    function launchArtifact(prompt) {
-      return `
-        <main class="page">
-          <section class="hero">
-            <div>
-              <h2>产品发布工作台</h2>
-              <p>Agent 把「${escapeHtml(prompt || "产品发布")}」转换成一个可操作界面，而不是只返回一段文字清单。</p>
-            </div>
-            <button class="btn" data-agent-action="request_next_plan" data-value="launch">生成下一版计划</button>
-          </section>
-          <section class="grid">
-            <article class="card"><h3>发布窗口</h3><div class="metric">6 天</div><p class="muted">建议先完成定价页、邮件、灰度开关。</p></article>
-            <article class="card"><h3>风险项</h3><div class="metric" style="color:#b45309">3</div><p class="muted">支付链路、容量预估、客服话术待确认。</p></article>
-            <article class="card"><h3>负责人</h3><div class="metric" style="color:#188264">4</div><p class="muted">产品、工程、增长、客服各有明确动作。</p></article>
-          </section>
-          <section class="stack">
-            <article class="card row"><span>定价页文案审阅</span><span class="pill">今天</span></article>
-            <article class="card row"><span>灰度发布规则</span><button class="btn secondary" data-agent-action="open_task" data-value="rollout">展开</button></article>
-            <article class="card row"><span>客服 FAQ</span><button class="btn secondary" data-agent-action="open_task" data-value="faq">生成</button></article>
-          </section>
-        </main>`;
-    }
-
-    function dashboardArtifact() {
-      return `
-        <main class="page">
-          <section class="hero">
-            <div>
-              <h2>运营数据看板</h2>
-              <p>这里模拟 agent 根据你的请求直接返回一个可读、可点、可继续追问的数据界面。</p>
-            </div>
-            <select onchange="sendAgentEvent('change_range', { range: this.value })">
-              <option>最近 7 天</option>
-              <option>最近 30 天</option>
-              <option>本季度</option>
-            </select>
-          </section>
-          <section class="grid">
-            <article class="card"><h3>新增用户</h3><div class="metric">12,840</div><p class="muted">较上期 +18.6%</p></article>
-            <article class="card"><h3>激活率</h3><div class="metric" style="color:#188264">42%</div><p class="muted">主要来自 onboarding 优化。</p></article>
-            <article class="card"><h3>流失预警</h3><div class="metric" style="color:#ba3a54">186</div><p class="muted">建议优先触达高价值账户。</p></article>
-          </section>
-          <section class="stack">
-            <article class="card row"><span>渠道 A 转化下降</span><button class="btn secondary" data-agent-action="explain_metric" data-value="channel_a">解释</button></article>
-            <article class="card row"><span>企业版试用提升</span><button class="btn secondary" data-agent-action="drill_down" data-value="enterprise_trial">下钻</button></article>
-            <article class="card row"><span>导出本周摘要</span><button class="btn" data-agent-action="export_summary" data-value="weekly">导出</button></article>
-          </section>
-        </main>`;
-    }
-
-    function quoteArtifact() {
-      return `
-        <main class="page">
-          <section class="hero">
-            <div>
-              <h2>报价确认</h2>
-              <p>HTML 不只是展示结果，也能收集结构化输入，再交还给 agent 继续处理。</p>
-            </div>
-            <button class="btn warning" data-agent-action="flag_review" data-value="quote">标记人工复核</button>
-          </section>
-          <section class="grid">
-            <article class="card"><h3>基础费用</h3><div class="metric">¥28,000</div><p class="muted">含 10 个席位。</p></article>
-            <article class="card"><h3>实施服务</h3><div class="metric">¥8,500</div><p class="muted">2 周交付。</p></article>
-            <article class="card"><h3>折扣</h3><div class="metric" style="color:#188264">12%</div><p class="muted">年度付款。</p></article>
-          </section>
-          <section class="card stack">
-            <div class="control"><label>付款周期</label><select id="period"><option>年度</option><option>季度</option><option>月度</option></select></div>
-            <div class="control"><label>客户备注</label><input id="note" placeholder="例如：需要补充 SLA 条款"></div>
-            <div class="actions">
-              <button class="btn" data-agent-action="approve_quote" data-value="approved">确认报价</button>
-              <button class="btn secondary" onclick="sendAgentEvent('revise_quote', { period: document.querySelector('#period').value, note: document.querySelector('#note').value })" type="button">要求修改</button>
-            </div>
-          </section>
-        </main>`;
-    }
-
-    async function handlePrompt(prompt) {
-      currentPrompt = prompt;
-      addMessage("user", "User", prompt);
-      setBusy(true, "Calling LLM");
-
+    async function createRoot(topic) {
+      state.error = "";
+      setBusy(true, "Generating");
       try {
-        const artifact = await requestArtifact({ prompt });
-        setArtifact(artifact.html, artifact.description || "LLM HTML artifact");
-        setBusy(false, "API ready");
+        const page = await postJson("/api/page", { topic });
+        createNode(page, null, { topic, label: topic });
+        saveState();
+        render();
+        setBusy(false, "Ready");
       } catch (error) {
-        const artifact = createArtifact(prompt);
-        setArtifact(artifact.html, `${artifact.description} · fallback`);
-        addMessage("event", "API Error", `${error.message} 已使用本地模板兜底。`);
-        setBusy(false, "Fallback mode");
+        state.error = error.message;
+        render();
+        setBusy(false, "Error");
       }
     }
 
-    window.addEventListener("message", async (event) => {
-      if (!event.data || event.data.source !== "html-agent-artifact") return;
-      addEvent(event.data.type, event.data.payload);
-      addMessage("event", "Artifact Event", `${event.data.type}: ${JSON.stringify(event.data.payload)}`);
+    async function expandNode(parentId, link) {
+      const parent = state.nodes[parentId];
+      if (!parent) return;
 
-      setBusy(true, "Updating artifact");
+      state.error = "";
+      state.activeNodeId = parentId;
+      render();
+      setBusy(true, `Expanding ${link.label}`);
+
       try {
-        const artifact = await requestArtifact({
-          prompt: currentPrompt,
-          event: {
-            type: event.data.type,
-            payload: event.data.payload
-          },
-          currentHtml: currentArtifactHtml
+        const page = await postJson("/api/expand", {
+          topic: link.topic,
+          label: link.label,
+          parentTitle: parent.title,
+          parentSummary: parent.summary,
+          contextPath: getPath(parentId).map((node) => node.title)
         });
-        setArtifact(artifact.html, artifact.description || "LLM HTML artifact");
-        setBusy(false, "API ready");
+        createNode(page, parentId, link);
+        parent.collapsed = false;
+        saveState();
+        render();
+        setBusy(false, "Ready");
       } catch (error) {
-        addMessage("event", "API Error", `${error.message} 事件已记录，artifact 暂不更新。`);
-        setBusy(false, "Fallback mode");
+        state.error = error.message;
+        render();
+        setBusy(false, "Error");
       }
-    });
+    }
+
+    function getPath(nodeId) {
+      const path = [];
+      let current = state.nodes[nodeId];
+      while (current) {
+        path.unshift(current);
+        current = state.nodes[current.parentId];
+      }
+      return path;
+    }
+
+    function renderTree() {
+      if (!state.rootIds.length) {
+        tree.innerHTML = `<div class="tree-empty">还没有知识树。输入一个主题后，AI 会生成第一个伪网页。</div>`;
+        return;
+      }
+
+      tree.innerHTML = state.rootIds.map((id) => renderTreeNode(id)).join("");
+      tree.querySelectorAll("[data-tree-node]").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.activeNodeId = button.dataset.treeNode;
+          saveState();
+          render();
+        });
+      });
+    }
+
+    function renderTreeNode(nodeId) {
+      const node = state.nodes[nodeId];
+      if (!node) return "";
+      const hasChildren = node.children.length > 0;
+      const children = hasChildren && !node.collapsed
+        ? `<div class="tree-children">${node.children.map((id) => renderTreeNode(id)).join("")}</div>`
+        : "";
+
+      return `
+        <div>
+          <button class="tree-item ${node.id === state.activeNodeId ? "active" : ""}" data-tree-node="${node.id}" type="button">
+            <span class="tree-icon">${hasChildren ? "▾" : "•"}</span>
+            <span>${escapeHtml(node.title)}</span>
+          </button>
+          ${children}
+        </div>
+      `;
+    }
+
+    function renderWorkspace() {
+      if (!state.rootIds.length || !state.activeNodeId) {
+        pathLabel.textContent = "等待主题";
+        workspace.innerHTML = `
+          <div class="empty-state">
+            <div>
+              <h2>从一个主题开始</h2>
+              <p>AI 会生成一个可点击的伪网页。点击页面里的概念，会递归生成子页面并挂到树上。</p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      const path = getPath(state.activeNodeId);
+      pathLabel.textContent = path.map((node) => node.title).join(" > ");
+      const errorHtml = state.error ? `<div class="error">${escapeHtml(state.error)}</div>` : "";
+      workspace.innerHTML = `
+        ${errorHtml}
+        <div class="node-stack">
+          ${path.map((node, index) => renderNode(node, index > 0)).join("")}
+        </div>
+      `;
+
+      workspace.querySelectorAll("[data-expand-link]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const parentId = button.dataset.parentId;
+          const linkIndex = Number(button.dataset.linkIndex);
+          const link = state.nodes[parentId]?.links[linkIndex];
+          if (link) expandNode(parentId, link);
+        });
+      });
+
+      workspace.querySelectorAll("[data-toggle-node]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const node = state.nodes[button.dataset.toggleNode];
+          if (!node) return;
+          node.collapsed = !node.collapsed;
+          saveState();
+          render();
+        });
+      });
+    }
+
+    function renderNode(node, isChild) {
+      return `
+        <article class="node ${isChild ? "child" : ""}">
+          <header class="node-header">
+            <div class="node-title">
+              <h2>${escapeHtml(node.title)}</h2>
+              ${node.summary ? `<p>${escapeHtml(node.summary)}</p>` : ""}
+            </div>
+            <div class="node-actions">
+              <button class="ghost" data-toggle-node="${node.id}" type="button">${node.collapsed ? "展开" : "折叠"}</button>
+            </div>
+          </header>
+          ${node.collapsed ? "" : `
+            <div class="node-body">${node.html}</div>
+            <div class="node-links">
+              ${node.links.map((link, index) => renderConcept(node.id, link, index)).join("")}
+            </div>
+            ${node.children.length ? `<div class="children-note">已展开 ${node.children.length} 个子页面，可在左侧树中切换。</div>` : ""}
+          `}
+        </article>
+      `;
+    }
+
+    function renderConcept(parentId, link, index) {
+      return `
+        <button class="concept" data-expand-link data-parent-id="${parentId}" data-link-index="${index}" type="button">
+          <strong>${escapeHtml(link.label || link.topic)}</strong>
+          ${link.description ? `<span>${escapeHtml(link.description)}</span>` : ""}
+        </button>
+      `;
+    }
+
+    function render() {
+      renderTree();
+      renderWorkspace();
+    }
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const prompt = promptInput.value.trim();
-      if (!prompt) return;
-      await handlePrompt(prompt);
+      const topic = promptInput.value.trim();
+      if (!topic) return;
+      await createRoot(topic);
     });
 
     document.querySelectorAll("[data-sample]").forEach((button) => {
       button.addEventListener("click", async () => {
         promptInput.value = button.dataset.sample;
-        await handlePrompt(button.dataset.sample);
+        await createRoot(button.dataset.sample);
       });
     });
 
-    previewTab.addEventListener("click", () => {
-      workspace.classList.remove("show-code");
-      previewTab.classList.add("active");
-      sourceTab.classList.remove("active");
+    resetButton.addEventListener("click", () => {
+      state.nodes = {};
+      state.rootIds = [];
+      state.activeNodeId = null;
+      state.error = "";
+      localStorage.removeItem("htmlagent.hyperpage.v1");
+      render();
     });
 
-    sourceTab.addEventListener("click", () => {
-      workspace.classList.add("show-code");
-      sourceTab.classList.add("active");
-      previewTab.classList.remove("active");
-    });
-
-    addMessage("agent", "Agent", "输入需求后会调用本地 /api/generate，由服务端请求 LLM 并返回 HTML artifact。");
-    setArtifact(launchArtifact("帮我规划一次产品发布"), "产品发布工作台");
+    render();
   </script>
 </body>
 </html>
